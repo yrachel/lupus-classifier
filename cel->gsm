@@ -1,0 +1,44 @@
+import pandas as pd
+import re
+
+# STEP 1: BUILD CEL → GSM MAPPING
+cel_to_gsm = {}
+with open('file path to GSE88884.txt', 'r') as f:
+    for line in f:
+        if line.startswith('!Sample_supplementary_file'):
+            matches = re.findall(r'(GSM\d+)_([A-Za-z0-9]+\.CEL)', line)
+            for gsm, cel in matches:
+                cel_to_gsm[cel] = gsm
+
+print(f"Found {len(cel_to_gsm)} mappings")
+print(list(cel_to_gsm.items())[:3])
+
+# STEP 2: RENAME COLUMNS IN EXPRESSION MATRIX
+expr = pd.read_csv('file path to the preprocessing1.2GB file.txt', sep='\t', index_col=0)
+
+expr.columns = [
+    cel_to_gsm.get(col.strip().strip('"').replace('.gz', ''), col)
+    for col in expr.columns
+]
+
+print(expr.columns[:5].tolist())
+
+# STEP 3: EXTRACT METADATA FROM GSE88884.txt
+metadata = {}
+with open('file path to GSE88884.txt', 'r') as f:
+    for line in f:
+        if line.startswith('!Sample_geo_accession'):
+            metadata['gsm'] = [v.strip().strip('"') for v in line.strip().split('\t')[1:]]
+        elif line.startswith('!Sample_characteristics_ch1'):
+            vals = line.strip().split('\t')[1:]
+            first_val = next((v for v in vals if ':' in v), None)
+            if first_val:
+                key = first_val.split(':')[0].strip().strip('"').lower()
+                metadata[key] = [v.split(':', 1)[-1].strip().strip('"') for v in vals]
+
+meta_df = pd.DataFrame(metadata)
+meta_df.set_index('gsm', inplace=True)
+
+print(f"\nMetadata shape: {meta_df.shape}")
+print(f"Columns: {meta_df.columns.tolist()}")
+print(meta_df.head(3))
