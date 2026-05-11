@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy import stats
 import os
-from fairlearn.metrics import demographic_parity_difference
+from fairlearn.metrics import MetricFrame, demographic_parity_difference, selection_rate
 from fairlearn.reductions import ExponentiatedGradient
 
 from sklearn.model_selection import (train_test_split, StratifiedKFold,
@@ -58,9 +58,16 @@ def get_c_metrics(gs, X, y_test, s):
     y_prob = best.predict_proba(X)[:, 1]
     auc    = roc_auc_score(y_test, y_prob)
     dpd    = demographic_parity_difference(y_test, y_pred, sensitive_features=s)
+    mf = MetricFrame(
+        metrics=selection_rate,
+        y_true=y_test,
+        y_pred=y_pred,
+        sensitive_features=s
+    )
 
     print(f"Test AUC: {auc:.4f}")
     print(classification_report(y_test_c, y_pred, target_names=['Healthy', 'SLE']))
+    print(mf.by_group)
     
     return {
         'model':       best,
@@ -78,9 +85,16 @@ def get_r_metrics(gs, X, y_test, s):
     rmse    = np.sqrt(mean_squared_error(y_test, y_pred))
     r2      = r2_score(y_test, y_pred)
     dpd    = demographic_parity_difference(y_test, y_pred, sensitive_features=s)
+    mf = MetricFrame(
+        metrics=selection_rate,
+        y_true=y_test,
+        y_pred=y_pred,
+        sensitive_features=s
+    )
 
     print(f"Test RMSE: {rmse:.4f}")
     print(f"Test R²:   {r2:.4f}")
+    print(mf.by_group)
     
     return {
         'model':       best,
@@ -472,7 +486,7 @@ for name, res in reg_results.items():
     print(f"    Best params: {res['best_params']}")
 
 summary = {'task':[], 'model':[], 'best_params':[], 'cv_score':[], 'test_metric':[], 'test_score':[], 'dpd': []}
-for name, res in clf_results.items():
+for name, res in clf_results.items():    
     summary['task'].append('Classification')
     summary['model'].append(name)
     summary['best_params'].append(str(res['best_params']))
