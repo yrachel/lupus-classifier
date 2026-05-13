@@ -369,15 +369,6 @@ for name, (model, param_grid) in reg_grids.items():
     reg_results[name]['best_params'] = gs.best_params_
     reg_results[name]['best_cv_r2']  = gs.best_score_
 
-    print(f"\nTraining fair version of {name}...")
-    try:
-        fair_model = train_fair_model(gs.best_estimator_, X_tr, y_train_r, s_train_r)
-        clf_results[f'{name} (Fair)'] = get_r_metrics(fair_model, X_te, y_test_r, s_test_r, name=f'{name} Fair')
-        clf_results[f'{name} (Fair)']['best_params'] = gs.best_params_
-        clf_results[f'{name} (Fair)']['best_cv_auc'] = gs.best_score_
-    except Exception as e:
-        print(f"Fair model failed for {name}: {e}")
-
 # Predicted vs actual
 orig_reg = [k for k in reg_results if 'Fair' not in k]
 fig, axes = plt.subplots(1, len(orig_reg), figsize=(15, 5))
