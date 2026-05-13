@@ -393,6 +393,30 @@ plt.tight_layout()
 plt.savefig(f'{OUT}/reg_predicted_vs_actual.png', dpi=150)
 plt.close()
 
+# DPD comparison plot
+orig_models = [k for k in reg_results if 'Fair' not in k]
+fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+for ax, attr, title in zip(axes, ['dpd_race', 'dpd_sex'], ['DPD by Race', 'DPD by Sex']):
+    names    = []
+    dpd_orig = []
+    dpd_fair = []
+    for name in orig_models:
+        names.append(name)
+        dpd_orig.append(abs(reg_results[name][attr]))
+        fair_key = f'{name} (Fair)'
+        dpd_fair.append(abs(reg_results[fair_key][attr]) if fair_key in reg_results else np.nan)
+    x = np.arange(len(names))
+    ax.bar(x - 0.2, dpd_orig, 0.4, label='Original')
+    ax.bar(x + 0.2, dpd_fair, 0.4, label='Fair')
+    ax.set_xticks(x)
+    ax.set_xticklabels(names, rotation=15, ha='right')
+    ax.set_ylabel('|DPD|')
+    ax.set_title(title)
+    ax.legend()
+plt.tight_layout()
+plt.savefig(f'{OUT}/reg_dpd_comparison.png', dpi=150)
+plt.close()
+
 # Best regressor importances
 best_reg_name = max(orig_reg, key=lambda k: reg_results[k]['r2'])
 best_reg      = reg_results[best_reg_name]['model']

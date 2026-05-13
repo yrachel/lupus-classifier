@@ -369,6 +369,15 @@ for name, (model, param_grid) in reg_grids.items():
     reg_results[name]['best_params'] = gs.best_params_
     reg_results[name]['best_cv_r2']  = gs.best_score_
 
+    print(f"\nTraining fair version of {name}...")
+    try:
+        fair_model = train_fair_model(gs.best_estimator_, X_tr, y_train_r, s_train_r)
+        clf_results[f'{name} (Fair)'] = get_r_metrics(fair_model, X_te, y_test_r, s_test_r, name=f'{name} Fair')
+        clf_results[f'{name} (Fair)']['best_params'] = gs.best_params_
+        clf_results[f'{name} (Fair)']['best_cv_auc'] = gs.best_score_
+    except Exception as e:
+        print(f"Fair model failed for {name}: {e}")
+
 # Predicted vs actual
 orig_reg = [k for k in reg_results if 'Fair' not in k]
 fig, axes = plt.subplots(1, len(orig_reg), figsize=(15, 5))
@@ -382,6 +391,30 @@ for ax, name in zip(axes, orig_reg):
     ax.set_title(f"{name}\nRMSE={res['rmse']:.2f}, R²={res['r2']:.4f}")
 plt.tight_layout()
 plt.savefig(f'{OUT}/reg_predicted_vs_actual.png', dpi=150)
+plt.close()
+
+# DPD comparison plot
+orig_models = [k for k in reg_results if 'Fair' not in k]
+fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+for ax, attr, title in zip(axes, ['dpd_race', 'dpd_sex'], ['DPD by Race', 'DPD by Sex']):
+    names    = []
+    dpd_orig = []
+    dpd_fair = []
+    for name in orig_models:
+        names.append(name)
+        dpd_orig.append(abs(reg_results[name][attr]))
+        fair_key = f'{name} (Fair)'
+        dpd_fair.append(abs(reg_results[fair_key][attr]) if fair_key in reg_results else np.nan)
+    x = np.arange(len(names))
+    ax.bar(x - 0.2, dpd_orig, 0.4, label='Original')
+    ax.bar(x + 0.2, dpd_fair, 0.4, label='Fair')
+    ax.set_xticks(x)
+    ax.set_xticklabels(names, rotation=15, ha='right')
+    ax.set_ylabel('|DPD|')
+    ax.set_title(title)
+    ax.legend()
+plt.tight_layout()
+plt.savefig(f'{OUT}/reg_dpd_comparison.png', dpi=150)
 plt.close()
 
 # Best regressor importances
